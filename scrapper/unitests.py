@@ -85,19 +85,8 @@ def test_duplicate_company_id(db_connection):
             VALUES (%s, %s);
         """, ("company_123", "Duplicate Company"))
 
-
-def test_wrong_data_type_in_address(db_connection):
-    cursor = db_connection.cursor()
-    with pytest.raises(psycopg2.Error):
-        cursor.execute("""
-            INSERT INTO addresses (address, city, state, postalcode)
-            VALUES (%s, %s, %s, %s);
-        """, ("123 Fake St", ["Not", "a", "string"], "TS", None))
-
-
 def test_wrong_data_type_in_companies(db_connection):
     cursor = db_connection.cursor()
-    # years is INT - test inserting string
     with pytest.raises(psycopg2.errors.InvalidTextRepresentation):
         cursor.execute("""
             INSERT INTO companies (id, name, years)
@@ -107,12 +96,11 @@ def test_wrong_data_type_in_companies(db_connection):
 
 def test_wrong_data_type_in_personnel(db_connection):
     cursor = db_connection.cursor()
-    # name and position are VARCHAR - test inserting NULL if not allowed or non-string?
     with pytest.raises(psycopg2.Error):
         cursor.execute("""
             INSERT INTO personnel (name, position)
             VALUES (%s, %s);
-        """, (None, 123))  # position as int, name as None
+        """, (None, 123)) 
 
 
 

@@ -45,8 +45,8 @@ def create_tables(cursor, _):
         cursor.execute("""
         CREATE TABLE personnel (
             id SERIAL PRIMARY KEY,
-            name VARCHAR,
-            position VARCHAR,
+            name VARCHAR NOT NULL,
+            position VARCHAR NOT NULL,
             UNIQUE (name, position)
         );
         """)

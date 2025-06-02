@@ -2,10 +2,15 @@ beautifulsoup4==4.13.4
 certifi==2025.4.26
 charset-normalizer==3.4.2
 cloudscraper==1.2.71
+colorama==0.4.6
 dotenv==0.9.9
 idna==3.10
+iniconfig==2.1.0
+packaging==25.0
+pluggy==1.6.0
 psycopg2-binary==2.9.10
 pyparsing==3.2.3
+pytest==8.3.5
 python-dotenv==1.1.0
 requests==2.32.3
 requests-toolbelt==1.0.0
