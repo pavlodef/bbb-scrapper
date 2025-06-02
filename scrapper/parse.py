@@ -1,10 +1,17 @@
-from cloudscaper_client import scraper
-from bs4 import BeautifulSoup
-from models import Company
-from database_utils import use_db, save_company_to_db
-
 import re
 import os
+
+from requests.models import PreparedRequest
+from bs4 import BeautifulSoup
+from models import Company
+from dotenv import load_dotenv
+
+from cloudscaper_client import scraper
+from database_utils import use_db, save_company_to_db
+from parse_cities import fetch_cities
+
+load_dotenv()
+
 
 headers_initial = {
     "Accept": "application/json, text/plain, */*", 
@@ -39,7 +46,6 @@ headers_extra = {
     "Priority": "u=0, i"
 }
 
-
 def remove_dublicates(results):
     seen_urls = set()
     unique_results = []
@@ -52,16 +58,17 @@ def remove_dublicates(results):
 
     return unique_results
 
-def fetch_initial_info(param_text, page_number, country):
+def fetch_initial_info(param_text, page_number, city):
 
     params = {
-    "find_text": {param_text},
-    "find_country": {country},
-    "page": {str(page_number)},
+    "find_text": param_text,
+    "page": str(page_number),
+    "find_loc": city
     }
 
     FETCH_URL = os.getenv("BASE_URL") + os.getenv("COMPANY_SEARCH_URL")
-
+    req = PreparedRequest()
+    req.prepare_url(FETCH_URL, params)
     response = scraper.get(FETCH_URL, headers=headers_initial, params=params)
 
     if response.status_code // 100 == 2 :
@@ -72,20 +79,21 @@ def fetch_initial_info(param_text, page_number, country):
 
         for item in results:
             company = Company(
-                company_id=item["id"],
-                category=item["tobText"],
-                name = re.sub(r"</?em>", "",item["businessName"]),
-                phone=item["phone"],
-                address=item["address"],
-                city=item["city"],
-                state=item["state"],
-                postalCode=item["postalcode"],
+                company_id=(item.get("id") or "").strip(),
+                category=(item.get("tobText") or "").strip(),
+                name=re.sub(r"</?em>", "", (item.get("businessName") or "")).strip(),
+                phone=item.get("phone") or [],
+                address=(item.get("address") or "").strip(),
+                city=(item.get("city") or "").strip(),
+                state=(item.get("state") or "").strip(),
+                postalCode=(item.get("postalcode") or "").strip(),
                 websiteUrl=None,
                 years=None,
                 description=None,
-                reportUrl=item["reportUrl"],
-                owners = None
+                reportUrl=(item.get("reportUrl") or "").strip(),
+                owners=None
             )
+
 
             fetch_extra_info(company)
 
@@ -95,8 +103,11 @@ def fetch_initial_info(param_text, page_number, country):
             )
 
     else:
-        print("Problem with response:", response.status_code)
-        print(response.text)
+        
+        print(f"""Problem with response:{response.status_code},
+              Response text: {response.text},
+              Full URL: {req.url}
+              """)
 
 
 def fetch_extra_info(company : Company):
@@ -104,13 +115,17 @@ def fetch_extra_info(company : Company):
     if not company.reportUrl:
         return
     
+    
     FETCH_URL = os.getenv("BASE_URL") + company.reportUrl
+
 
     response = scraper.get(FETCH_URL, headers=headers_extra)
 
 
     if response.status_code // 100 != 2:
-        print(f"Failed to fetch extra info for {company.name}")
+        print(f"""Failed to fetch extra info for {company.name},
+              Using this URL for extra info:{FETCH_URL}
+              """)
         return
 
     soup = BeautifulSoup(response.text, "html.parser")
@@ -137,8 +152,15 @@ def fetch_extra_info(company : Company):
 
     owners = {}
     for item in owners_tag:
-        owner, role = item.text.split(",")
-        owners[owner.strip()] = role.strip()
+        text = item.text
+        try:
+            owner, role = text.split(",", 1)
+            owners[owner.strip()] = role.strip()
+        except ValueError:
+            print(f"""Skipping malformed owner entry: '{text}'
+                  Using this URL for extra info:{FETCH_URL}
+                  """)
+            continue
 
     company.description = description
     company.years = years
@@ -146,7 +168,8 @@ def fetch_extra_info(company : Company):
     company.owners = owners
 
     
+cities = fetch_cities("USA","a",500)
 
-
-
-fetch_initial_info("Restaurants",15)
+for city in cities:
+    for i in range(15):
+        fetch_initial_info("Restaurants", i+1, city)

@@ -4,6 +4,9 @@ services:
     depends_on:
       - db
     environment:
+      BASE_URL: ${BASE_URL}
+      CITY_SEARCH_URL: ${CITY_SEARCH_URL}
+      COMPANY_SEARCH_URL: ${COMPANY_SEARCH_URL}
       DATABASE_URL: ${DATABASE_URL}
 
 

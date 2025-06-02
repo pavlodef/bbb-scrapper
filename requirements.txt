@@ -2,9 +2,11 @@ beautifulsoup4==4.13.4
 certifi==2025.4.26
 charset-normalizer==3.4.2
 cloudscraper==1.2.71
+dotenv==0.9.9
 idna==3.10
 psycopg2-binary==2.9.10
 pyparsing==3.2.3
+python-dotenv==1.1.0
 requests==2.32.3
 requests-toolbelt==1.0.0
 soupsieve==2.7

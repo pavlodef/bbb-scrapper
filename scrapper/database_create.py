@@ -1,7 +1,6 @@
 import psycopg2
 import os
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-import psycopg2.errors
+
 from database_utils import use_db
 
 def create_tables(cursor, _):
@@ -10,10 +9,10 @@ def create_tables(cursor, _):
         cursor.execute("""
         CREATE TABLE addresses (
             id SERIAL PRIMARY KEY,
-            address TEXT NOT NULL,
-            city TEXT NOT NULL,
-            state TEXT NOT NULL,
-            postalcode TEXT NOT NULL,
+            address TEXT,
+            city TEXT,
+            state TEXT,
+            postalcode TEXT,
             UNIQUE (address, city, state, postalcode)
         );
         """)
@@ -31,7 +30,7 @@ def create_tables(cursor, _):
             website VARCHAR,
             years INT,
             description TEXT,
-            address_id INTEGER UNIQUE,
+            address_id INTEGER,
             CONSTRAINT fk_address FOREIGN KEY (address_id)
                 REFERENCES addresses(id)
                 ON DELETE SET NULL
@@ -67,18 +66,6 @@ def create_tables(cursor, _):
         print("Table 'company_personnel' created.")
     except psycopg2.errors.DuplicateTable:
         print("Table 'company_personnel' already exists.")
-
-    try:
-        cursor.execute("""
-        CREATE TABLE cities (
-            id SERIAL PRIMARY KEY,
-            name VARCHAR UNIQUE
-        );
-        """)
-        print("Table 'cities' created.")
-    except:
-        print("Table 'cities' already exists.")
-
     
 
 

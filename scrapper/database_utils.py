@@ -10,7 +10,6 @@ def use_db(
     autocommit=True,
     callback=None
 ):
-    print("Using DB connection:", dsn)
     if dsn:
         conn = psycopg2.connect(dsn)
     else:
@@ -35,11 +34,6 @@ def use_db(
         conn.close()
 
 
-
-def save_cities(curson, cities):
-    cursor.execute()
-
-
 def save_company_to_db(cursor, company):
     cursor.execute("SELECT 1 FROM companies WHERE id = %s;", (company.company_id,))
     exists = cursor.fetchone()
@@ -51,11 +45,14 @@ def save_company_to_db(cursor, company):
         cursor.execute("""
         INSERT INTO addresses (address, city, state, postalcode)
         VALUES (%s, %s, %s, %s)
+        ON CONFLICT (address, city, state, postalcode) DO UPDATE SET address = EXCLUDED.address
         RETURNING id;
     """, (company.address, company.city, company.state, company.postalCode))
-    
-        address_id = cursor.fetchone()[0]
-
+        try:
+            address_id = cursor.fetchone()[0]
+        except:
+            print(f"something gone wrong for this company: {company}")
+            return
         cursor.execute("""
             INSERT INTO companies (id, name, phone, website, years, description, address_id)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -70,7 +67,6 @@ def save_company_to_db(cursor, company):
             address_id
         ))
 
-        print(company.owners)
         if company.owners:
             for name, position in company.owners.items():
                 cursor.execute("""
