@@ -3,11 +3,11 @@ import os
 
 from requests.models import PreparedRequest
 from bs4 import BeautifulSoup
-from models import Company
 from dotenv import load_dotenv
 
+from database.models import Company
 from cloudscaper_client import scraper
-from database_utils import use_db, save_company_to_db
+from database.database_utils import use_db, save_company_to_db
 from parse_cities import fetch_cities
 
 load_dotenv()
