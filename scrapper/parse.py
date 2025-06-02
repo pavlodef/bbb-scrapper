@@ -1,12 +1,10 @@
-import cloudscraper
-import requests
+from cloudscaper_client import scraper
 from bs4 import BeautifulSoup
 from models import Company
 from database_utils import use_db, save_company_to_db
-import re
-BASE_URL = "https://www.bbb.org"
 
-#find_country = ["US", "CAN"]
+import re
+import os
 
 headers_initial = {
     "Accept": "application/json, text/plain, */*", 
@@ -23,8 +21,6 @@ headers_initial = {
     "Sec-Fetch-Mode": "cors",
     "Sec-Fetch-Site": "same-origin"
 }
-
-BASE_URL = "https://www.bbb.org"
 
 headers_extra = {
     "Host": "www.bbb.org",
@@ -43,39 +39,36 @@ headers_extra = {
     "Priority": "u=0, i"
 }
 
-scraper = cloudscraper.create_scraper(
-    interpreter="nodejs",
-    browser={
-        "browser": "chrome",
-        "platform": "ios",
-        "desktop": False,
-    }
-)
 
+def remove_dublicates(results):
+    seen_urls = set()
+    unique_results = []
 
+    for item in results:
+        url = item.get("reportUrl")
+        if url not in seen_urls:
+            seen_urls.add(url)
+            unique_results.append(item)
 
-test_url = "https://www.bbb.org/us/ny/new-york/profile/restaurants/taam-tov-restaurant-inc-0121-170777"
+    return unique_results
 
-
-def fetch_initial_info(param_text, page_number):
+def fetch_initial_info(param_text, page_number, country):
 
     params = {
     "find_text": {param_text},
-    "find_country": "USA",
+    "find_country": {country},
     "page": {str(page_number)},
     }
 
-    FETCH_URL = BASE_URL + "/api/search"
-    #testing
-    req = requests.Request("GET", FETCH_URL, params=params, headers=headers_initial)
-    prepared = req.prepare()
-    print("Full link:", prepared.url) 
+    FETCH_URL = os.getenv("BASE_URL") + os.getenv("COMPANY_SEARCH_URL")
 
     response = scraper.get(FETCH_URL, headers=headers_initial, params=params)
+
     if response.status_code // 100 == 2 :
         data = response.json()
         
-        results = data["results"]
+        results = remove_dublicates(data["results"])
+
 
         for item in results:
             company = Company(
@@ -90,15 +83,14 @@ def fetch_initial_info(param_text, page_number):
                 websiteUrl=None,
                 years=None,
                 description=None,
-                reportUrl=item["ReportUrl"],
+                reportUrl=item["reportUrl"],
                 owners = None
             )
+
             fetch_extra_info(company)
 
             use_db(
-                dbname="bbb",
-                user="postgres",
-                password="postgres",
+                dsn=os.getenv('DATABASE_URL'),
                 callback=lambda cursor, conn: save_company_to_db(cursor, company)
             )
 
@@ -112,7 +104,7 @@ def fetch_extra_info(company : Company):
     if not company.reportUrl:
         return
     
-    FETCH_URL = BASE_URL + company.reportUrl
+    FETCH_URL = os.getenv("BASE_URL") + company.reportUrl
 
     response = scraper.get(FETCH_URL, headers=headers_extra)
 
@@ -125,21 +117,19 @@ def fetch_extra_info(company : Company):
 
     website_link_tag = soup.select_one("a:-soup-contains('Visit Website')")
     website_url = website_link_tag["href"] if website_link_tag else None
-    print(website_url)
 
     years_tag = soup.select_one("p:-soup-contains('Years in Business')")
     years = years_tag.text.split(":")[-1].strip() if years_tag else None
-    print(years)
 
     description_heading = soup.find("h2", id="about")
     description_body_div = description_heading.find_next_sibling("div", class_="bds-body") if description_heading else None
     description = description_body_div.text.strip() if description_body_div else None
 
-    print(description)
 
     possible_names = ["Owner", "Manager", "Director", "President"]
 
     owners_tag = set()
+
     # slow 
     for dd in soup.select("dd"):
         if any(name in dd.get_text() for name in possible_names):

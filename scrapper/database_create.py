@@ -1,19 +1,8 @@
 import psycopg2
+import os
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import psycopg2.errors
 from database_utils import use_db
-DB_NAME = "bbb"
-DB_USERNAME = "postgres"
-DB_PASSWORD = "postgres"
-
-
-def create_database(cursor, _):
-    try:
-        cursor.execute(f"CREATE DATABASE {DB_NAME}")
-        print(f"Database '{DB_NAME}' created successfully.")
-    except psycopg2.errors.DuplicateDatabase:
-        print(f"Database '{DB_NAME}' already exists.")
-
 
 def create_tables(cursor, _):
 
@@ -79,21 +68,22 @@ def create_tables(cursor, _):
     except psycopg2.errors.DuplicateTable:
         print("Table 'company_personnel' already exists.")
 
+    try:
+        cursor.execute("""
+        CREATE TABLE cities (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR UNIQUE
+        );
+        """)
+        print("Table 'cities' created.")
+    except:
+        print("Table 'cities' already exists.")
 
-# Create database
-use_db(
-    dbname="postgres",
-    user=DB_USERNAME,
-    password=DB_PASSWORD,
-    autocommit=True,
-    callback=create_database
-)
+    
 
-# Create tables
+
 use_db(
-    dbname=DB_NAME,
-    user=DB_USERNAME,
-    password=DB_PASSWORD,
+    dsn=os.getenv('DATABASE_URL'),
     callback=create_tables
 )
 

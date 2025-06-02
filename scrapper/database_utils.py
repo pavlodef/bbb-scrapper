@@ -1,17 +1,19 @@
 import psycopg2
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
 def use_db(
-    dbname,
-    user,
-    password,
-    host="localhost",
-    port="5432",
-    autocommit=False,
+    dsn=None,
+    dbname=None,
+    user=None,
+    password=None,
+    host='localhost',
+    port='5432',
+    autocommit=True,
     callback=None
 ):
-    conn = None
-    cursor = None
-    try:
+    print("Using DB connection:", dsn)
+    if dsn:
+        conn = psycopg2.connect(dsn)
+    else:
         conn = psycopg2.connect(
             dbname=dbname,
             user=user,
@@ -19,20 +21,23 @@ def use_db(
             host=host,
             port=port
         )
-        if autocommit:
-            conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
 
-        cursor = conn.cursor()
+    if autocommit:
+        conn.autocommit = True
+
+    try:
         if callback:
+            cursor = conn.cursor()
             callback(cursor, conn)
-        if not autocommit:
             conn.commit()
-    finally:
-        if cursor:
             cursor.close()
-        if conn:
-            conn.close()
+    finally:
+        conn.close()
 
+
+
+def save_cities(curson, cities):
+    cursor.execute()
 
 
 def save_company_to_db(cursor, company):
